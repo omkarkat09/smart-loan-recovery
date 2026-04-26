@@ -1,0 +1,188 @@
+# =============================================================================
+# Smart Loan Recovery — .gitignore
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Data — never commit raw or processed data to version control
+# Large files belong in cloud storage (S3, GCS) or DVC
+# -----------------------------------------------------------------------------
+data/raw/
+data/processed/
+data/external/
+*.csv
+*.parquet
+*.feather
+*.json.gz
+*.pkl
+*.pickle
+*.h5
+*.hdf5
+*.db
+*.sqlite
+
+# Keep the directory structure but ignore contents
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# -----------------------------------------------------------------------------
+# Models & Experiments — use MLflow or DVC to track these
+# -----------------------------------------------------------------------------
+models/
+*.joblib
+mlruns/
+mlartifacts/
+wandb/
+
+# -----------------------------------------------------------------------------
+# Notebooks — ignore checkpoints, keep the notebooks themselves
+# -----------------------------------------------------------------------------
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+*.nbconvert.ipynb
+
+# -----------------------------------------------------------------------------
+# Python
+# -----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+*.pyo
+
+# Distribution / packaging
+dist/
+build/
+eggs/
+*.egg-info/
+*.egg
+.eggs/
+MANIFEST
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+
+# -----------------------------------------------------------------------------
+# Virtual environments
+# -----------------------------------------------------------------------------
+.venv/
+venv/
+env/
+ENV/
+.env/
+.conda/
+
+# Conda
+*.conda
+
+# -----------------------------------------------------------------------------
+# Secrets & credentials — NEVER commit these
+# -----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+credentials/
+config/secrets.ini
+config/local_settings.py
+
+# AWS
+.aws/
+aws_credentials
+
+# -----------------------------------------------------------------------------
+# IDE & editor files
+# -----------------------------------------------------------------------------
+
+# VS Code
+.vscode/
+!.vscode/extensions.json
+
+# JetBrains (PyCharm, DataSpell)
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Vim / Neovim
+*.swp
+*.swo
+*~
+.netrwhist
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# -----------------------------------------------------------------------------
+# Logs & temporary files
+# -----------------------------------------------------------------------------
+logs/
+*.log
+*.out
+*.err
+tmp/
+temp/
+.tmp/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+nosetests.xml
+
+# MyPy / type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+
+# Profiling
+*.prof
+*.lprof
+
+# -----------------------------------------------------------------------------
+# Docker
+# -----------------------------------------------------------------------------
+# Keep Dockerfile but ignore local overrides and volumes
+docker-compose.override.yml
+.docker/
+
+# -----------------------------------------------------------------------------
+# Documentation builds
+# -----------------------------------------------------------------------------
+docs/_build/
+docs/site/
+site/
+
+# Sphinx
+docs/auto_examples/
+docs/generated/
+
+# -----------------------------------------------------------------------------
+# DVC (Data Version Control) — if added later
+# -----------------------------------------------------------------------------
+/tmp
+
+# -----------------------------------------------------------------------------
+# Jupyter kernel specs (local only)
+# -----------------------------------------------------------------------------
+.kernels/
