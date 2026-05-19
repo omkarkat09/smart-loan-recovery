@@ -80,12 +80,17 @@ def main():
     with mlflow.start_run(run_name="logistic-regression-baseline"):
         model, scaler, auc, f1, coef_df, X_train, X_test, y_train, y_test = train_and_eval(X, y)
 
+        # Log dataset stats
+        feature_list = ",".join(X.columns.tolist())
+        null_rates = (X.isnull().mean() * 100).to_dict()
+
         # Log params
         mlflow.log_param("model_type", "LogisticRegression")
         mlflow.log_param("test_size", 0.2)
         mlflow.log_param("class_weight", "balanced")
         mlflow.log_param("max_iter", 1000)
         mlflow.log_param("n_features", X.shape[1])
+        mlflow.log_param("feature_list", feature_list)
         mlflow.log_param("n_train", len(X_train))
         mlflow.log_param("n_test", len(X_test))
 
@@ -94,6 +99,8 @@ def main():
         mlflow.log_metric("test_f1", f1)
         mlflow.log_metric("train_default_rate", y_train.mean())
         mlflow.log_metric("test_default_rate", y_test.mean())
+        for feature, rate in null_rates.items():
+            mlflow.log_metric(f"null_rate_{feature}", rate)
 
         # Log model
         mlflow.sklearn.log_model(model, "logistic_regression_model")

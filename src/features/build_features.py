@@ -44,13 +44,16 @@ def add_temporal_features(df: pd.DataFrame) -> pd.DataFrame:
     logger.info("Adding temporal features")
 
     # cb_person_cred_hist_length is in years → convert to days approx
-    df["credit_hist_days"] = (df["cb_person_cred_hist_length"] * 365).astype("int32")
+    # cb_person_cred_hist_length is int8 — cast to int64 to avoid overflow before multiplying
+    df["credit_hist_days"] = (df["cb_person_cred_hist_length"].astype("int32") * 365).astype("int32")
 
     # Proxy for "days since last payment activity" — inverse of credit history age
     # (younger credit file = more recent account opening = more recent activity)
     # We clip so it never goes negative and cap at 15 years
+    # cast to int32 first to avoid int8 overflow in arithmetic chain
+    cred_hist = df["cb_person_cred_hist_length"].astype("int32")
     df["days_since_payment_proxy"] = (
-        (15 * 365) - (df["cb_person_cred_hist_length"] * 365).clip(upper=15 * 365)
+        (15 * 365) - (cred_hist * 365).clip(upper=15 * 365)
     ).astype("int32")
 
     # rolling_30d_sum proxy: modelled monthly payment burden
@@ -178,14 +181,12 @@ def add_aggregated_features(df: pd.DataFrame) -> pd.DataFrame:
     logger.info("Adding aggregated features")
 
     # Customer totals — group statistics by loan_grade
-    grade_loan_avg = df.groupby("loan_grade")["loan_amnt"].transform("mean")
-    df["avg_loan_by_grade"] = grade_loan_avg.astype("float32")
+    # Use expanding windows to avoid data leakage (only look at records up to current row)
+    df["avg_loan_by_grade"] = df.groupby("loan_grade")["loan_amnt"].expanding().mean().reset_index(level=0, drop=True).astype("float32")
 
-    grade_loan_max = df.groupby("loan_grade")["loan_amnt"].transform("max")
-    df["max_loan_by_grade"] = grade_loan_max.astype("float32")
+    df["max_loan_by_grade"] = df.groupby("loan_grade")["loan_amnt"].expanding().max().reset_index(level=0, drop=True).astype("float32")
 
-    grade_income_avg = df.groupby("loan_grade")["person_income"].transform("mean")
-    df["income_score_by_grade"] = grade_income_avg.astype("float32")
+    df["income_score_by_grade"] = df.groupby("loan_grade")["person_income"].expanding().mean().reset_index(level=0, drop=True).astype("float32")
 
     # Employment stability: normalised by income bracket
     income_bracket = pd.qcut(df["person_income"], q=4, labels=["low", "mid", "high", "vhigh"])
