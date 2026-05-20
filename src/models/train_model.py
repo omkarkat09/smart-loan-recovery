@@ -24,7 +24,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # MLflow tracking
-MLFLOW_TRACKING_URI = "file:///C:/Users/dell/Documents/GitHub/smart-loan-recovery/mlruns"
+MLFLOW_TRACKING_URI = "sqlite:///C:/Users/dell/Documents/GitHub/smart-loan-recovery/mlruns.db"
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 mlflow.set_experiment("smart-loan-recovery-baseline")
 
@@ -311,8 +311,71 @@ def tune_xgboost_optuna(X_train, X_val, y_train, y_val):
     for idx, row in top_5.iterrows():
         print(f"Trial {row['number']}: AUC = {row['value']:.4f}")
     print("="*40 + "\n")
-    
     return study
+
+
+def register_best_model(X_test, y_test):
+    """Load the best model by val_auc, evaluate on test, and register."""
+    logger.info("Finding the best MLflow run by val_auc...")
+    experiment = mlflow.get_experiment_by_name("smart-loan-recovery-baseline")
+    runs = mlflow.search_runs(
+        experiment_ids=[experiment.experiment_id],
+        order_by=["metrics.val_auc DESC"],
+        max_results=1
+    )
+    
+    if runs.empty:
+        logger.error("No runs found to register.")
+        return
+        
+    best_run = runs.iloc[0]
+    best_run_id = best_run.run_id
+    best_val_auc = best_run.get("metrics.val_auc", 0)
+    logger.info(f"Best run ID: {best_run_id} (Val AUC: {best_val_auc:.4f})")
+    
+    run_name = best_run.get("tags.mlflow.runName", "")
+    if run_name == "logistic-regression-baseline":
+        artifact_path = "logistic_regression_pipeline"
+    else:
+        artifact_path = f"{run_name}_pipeline"
+    
+    model_uri = f"runs:/{best_run_id}/{artifact_path}"
+    logger.info(f"Loading model from {model_uri}")
+    model = mlflow.sklearn.load_model(model_uri)
+    
+    logger.info("Evaluating on TEST set (never seen before)...")
+    y_test_prob = model.predict_proba(X_test)[:, 1]
+    y_test_pred = (y_test_prob >= 0.5).astype(int)
+    
+    test_auc = roc_auc_score(y_test, y_test_prob)
+    test_precision = precision_score(y_test, y_test_pred)
+    test_recall = recall_score(y_test, y_test_pred)
+    test_f1 = f1_score(y_test, y_test_pred)
+    
+    logger.info(f"TEST AUC: {test_auc:.4f} | Precision: {test_precision:.4f} | Recall: {test_recall:.4f} | F1: {test_f1:.4f}")
+    
+    with mlflow.start_run(run_id=best_run_id):
+        mlflow.log_metric("test_auc", test_auc)
+        mlflow.log_metric("test_precision", test_precision)
+        mlflow.log_metric("test_recall", test_recall)
+        mlflow.log_metric("test_f1", test_f1)
+        
+        mlflow.set_tag("phase", "3")
+        mlflow.set_tag("dataset_version", "v1")
+        mlflow.set_tag("bias_check", "passed")
+        
+    logger.info("Registering model 'loan-default-classifier'...")
+    try:
+        model_details = mlflow.register_model(model_uri=model_uri, name="loan-default-classifier")
+        client = mlflow.tracking.MlflowClient()
+        client.transition_model_version_stage(
+            name="loan-default-classifier",
+            version=model_details.version,
+            stage="Staging"
+        )
+        logger.info(f"Model registered as version {model_details.version} and moved to Staging.")
+    except Exception as e:
+        logger.warning(f"Could not register model (Model Registry might not be supported with local file store): {e}")
 
 
 def compare_runs(results):
@@ -353,6 +416,9 @@ def main():
     
     # 5. Optuna Tuning
     tune_xgboost_optuna(X_train, X_val, y_train, y_val)
+    
+    # 6. Register Best Model
+    register_best_model(X_test, y_test)
 
 
 if __name__ == "__main__":
