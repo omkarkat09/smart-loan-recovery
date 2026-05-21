@@ -12,6 +12,10 @@ from sklearn.metrics import (
     confusion_matrix, ConfusionMatrixDisplay
 )
 from sklearn.calibration import CalibrationDisplay
+try:
+    from fairlearn.metrics import demographic_parity_difference, equalized_odds_difference
+except ImportError:
+    pass
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -141,3 +145,30 @@ def generate_evaluation_report(y_true, y_prob, run_name="model_evaluation"):
         logger.info(f"Started new MLflow run '{run_name}' and logged plots.")
 
     return plots
+
+
+def check_bias(y_true, y_pred, sensitive_features_df):
+    """
+    Check demographic_parity_difference and equalized_odds_difference on sensitive features.
+    If dp_diff > 0.1, print a warning and suggest which features to remove.
+    """
+    logger.info("Running Fairlearn bias detection...")
+    issues_found = False
+    for col in sensitive_features_df.columns:
+        try:
+            dp_diff = demographic_parity_difference(y_true, y_pred, sensitive_features=sensitive_features_df[col])
+            eo_diff = equalized_odds_difference(y_true, y_pred, sensitive_features=sensitive_features_df[col])
+            
+            logger.info(f"Bias Check [{col}]: DP Diff = {dp_diff:.4f} | EO Diff = {eo_diff:.4f}")
+            
+            if dp_diff > 0.1:
+                logger.warning(f"!!! BIAS DETECTED !!! Demographic Parity Difference for '{col}' is {dp_diff:.4f} (> 0.1).")
+                logger.warning(f"Recommendation: Consider removing '{col}' from the training features or apply bias mitigation techniques (e.g., Fairlearn Reductions) before accepting this model.")
+                issues_found = True
+        except Exception as e:
+            logger.error(f"Error computing bias for {col}: {e}")
+            
+    if not issues_found:
+        logger.info("Bias checks passed. No significant disparities detected.")
+    
+    return issues_found
