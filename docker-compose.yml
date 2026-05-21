@@ -1,0 +1,58 @@
+version: '3.8'
+
+networks:
+  slr-net:
+    driver: bridge
+
+services:
+  api:
+    build: .
+    container_name: slr_api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mlflow
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    networks:
+      - slr-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    container_name: slr_mlflow
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlruns:/mlruns
+    networks:
+      - slr-net
+    command: >
+      mlflow server
+      --backend-store-uri sqlite:////mlruns/mlruns.db
+      --default-artifact-root /mlruns
+      --host 0.0.0.0
+
+  prometheus:
+    image: prom/prometheus
+    container_name: slr_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - slr-net
+
+  grafana:
+    image: grafana/grafana
+    container_name: slr_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - slr-net

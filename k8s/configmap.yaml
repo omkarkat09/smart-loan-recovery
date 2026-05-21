@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: slr-config
+  namespace: default
+  labels:
+    app: smart-loan-recovery
+data:
+  MLFLOW_TRACKING_URI: "http://mlflow:5000"
+  LOG_LEVEL: "info"
+  MODEL_STAGE: "Staging"

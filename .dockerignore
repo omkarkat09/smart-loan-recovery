@@ -1,0 +1,12 @@
+data/
+notebooks/
+mlruns/
+tests/
+.git/
+__pycache__/
+*.pyc
+*.pyo
+.env
+.pytest_cache/
+scratch/
+mlruns.db

@@ -1,0 +1,49 @@
+groups:
+  - name: SmartLoanRecoveryAlerts
+    rules:
+      - alert: ModelAUCDegraded
+        expr: slr_prediction_auc < 0.70
+        for: 24h
+        labels:
+          severity: critical
+        annotations:
+          summary: "Model AUC has degraded below 0.70"
+          description: "The Stacking Ensemble AUC is currently {{ $value }}, which is below the acceptable threshold of 0.70."
+
+      - alert: DataDriftDetected
+        expr: slr_drift_score == 1.0
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Data Drift Detected"
+          description: "Evidently AI drift detector reported overall data drift."
+
+      - alert: HighLatencyP99
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API Latency (P99)"
+          description: "P99 latency over the last 5 minutes is {{ $value }}s, which exceeds the 0.5s threshold."
+
+      - alert: HighErrorRate
+        # Using sum(rate(...)) to safely calculate error ratio across instances
+        expr: (sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m]))) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High HTTP 5xx Error Rate"
+          description: "The API 5xx error rate is {{ $value }} (exceeds 1% threshold)."
+
+      - alert: RiskTierSpike
+        # Calculating the ratio of "high" risk tiers over the total predictions in a 30m window
+        expr: sum(rate(slr_risk_tier_counter_total{tier="high"}[30m])) / sum(rate(slr_risk_tier_counter_total[30m])) > 0.4
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Spike in High Risk Tier Predictions"
+          description: "Over 40% of predictions in the last 30 minutes are classified as 'high' risk."

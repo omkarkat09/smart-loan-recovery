@@ -4,7 +4,7 @@ An end-to-end machine learning system that predicts loan default risk and recomm
 optimal collection strategies to maximise recovery rates while minimising operational costs
 and customer friction.
 
-> **Status:** Phase 1 — Problem Definition & EDA
+> **Status:** Phase 6 — COMPLETE 🎉
 > **Target:** Default prediction AUC-ROC > 0.85 · Recovery rate +20% · Cost-to-collect −25%
 
 ---
@@ -12,6 +12,7 @@ and customer friction.
 ## Table of Contents
 
 - [Project Overview](#project-overview)
+- [Architecture & Tech Stack](#architecture--tech-stack)
 - [Repository Structure](#repository-structure)
 - [Getting Started](#getting-started)
 - [Development Workflow](#development-workflow)
@@ -39,6 +40,21 @@ and customer friction.
 
 ---
 
+## Architecture & Tech Stack
+
+This project is a fully productionized, compliance-ready MLOps system.
+
+- **Inference Server:** FastAPI (Async lifespan loading)
+- **Deployment & Orchestration:** Kubernetes (Rolling Deployments, HPA, Zero-Downtime)
+- **CI/CD:** GitHub Actions (Automated Test → Build → Push GHCR pipeline)
+- **Experiment Tracking & Model Registry:** MLflow
+- **Monitoring & Alerting:** Prometheus, Grafana, Alertmanager (Slack/PagerDuty routing)
+- **Data Drift Detection:** Evidently AI (Automated triggers & HTML reports)
+- **Compliance & Explainability:** SHAP (Right-to-Explanation), Fairlearn (Bias/ECOA checks), FCRA automated PII purging policies.
+- **Automated Self-Healing:** Automated retraining pipeline triggered by Prometheus metrics, promoting new models to staging automatically if AUC improves.
+
+---
+
 ## Repository Structure
 
 ```
@@ -49,10 +65,16 @@ smart-loan-recovery/
 ├── docs/
 │   ├── problem_statement.md    # Detailed problem definition
 │   ├── architecture.md         # System design diagrams
-│   └── phase_1_report.md       # EDA findings & feature ideas
+│   ├── runbook.md              # SRE Operational Procedures
+│   └── compliance_checklist.md # Legal, Ethical, & GDPR/FCRA policies
 ├── data/
 │   ├── raw/                    # Immutable source data (never edited)
 │   └── processed/              # Cleaned & transformed data
+├── k8s/                        # Kubernetes Deployment Manifests
+├── monitoring/
+│   ├── grafana/                # Dashboards & Provisioning
+│   ├── drift_detection.py      # Evidently AI script
+│   └── retrain_trigger.py      # Automated retraining logic
 ├── notebooks/
 │   ├── 01_eda_initial.ipynb    # Exploratory data analysis
 │   ├── 02_feature_exploration.ipynb
@@ -72,7 +94,7 @@ smart-loan-recovery/
 │   │   ├── __init__.py
 │   │   └── helpers.py
 │   └── api/
-│       ├── main.py             # FastAPI app (Phase 8)
+│       ├── main.py             # FastAPI app
 │       └── schemas.py
 ├── config/
 │   ├── config.ini
@@ -84,7 +106,8 @@ smart-loan-recovery/
 │   └── test_models.py
 ├── environment.yml             # Conda environment
 ├── requirements.txt            # Pip requirements
-├── Dockerfile                  # Container definition (Phase 8)
+├── Dockerfile                  # Container definition
+├── docker-compose.yml          # Local infrastructure
 ├── .gitignore
 ├── README.md
 └── LICENSE
@@ -97,6 +120,7 @@ smart-loan-recovery/
 ### Prerequisites
 
 - Python 3.10+
+- Docker & Docker Compose
 - [Conda](https://docs.conda.io/en/latest/miniconda.html) (recommended) **or** pip + venv
 - Git
 
@@ -122,23 +146,15 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3 — Get the dataset
+### 3 — Run the Full Stack Locally
 
-Download a loan default dataset from Kaggle (see [Data Sources](#data-sources) below)
-and place the raw CSV in `data/raw/`. The file is ignored by Git — never commit raw data.
-
+Use Docker Compose to spin up the API, MLflow, Prometheus, and Grafana:
 ```bash
-# Example: using the Kaggle CLI
-kaggle datasets download -d wordsforthewise/lending-club -p data/raw/ --unzip
+docker-compose up -d
 ```
+Access the API at `http://localhost:8000/docs`, MLflow at `http://localhost:5000`, and Grafana at `http://localhost:3000`.
 
-### 4 — Run the EDA notebook
-
-```bash
-jupyter lab notebooks/01_eda_initial.ipynb
-```
-
-### 5 — Run tests
+### 4 — Run tests
 
 ```bash
 pytest tests/ -v
@@ -186,7 +202,7 @@ flake8 src/ tests/
 pytest tests/ -v
 ```
 
-Pre-commit hooks automate this — see `.pre-commit-config.yaml` (to be added in Phase 2).
+Pre-commit hooks automate this — see `.pre-commit-config.yaml`.
 
 ### MLflow experiment tracking
 
@@ -204,14 +220,14 @@ All training runs log parameters and metrics to MLflow automatically.
 
 ## Phase Roadmap
 
-| Week | Phase | Key Deliverable |
-|---|---|---|
-| 1–2 | **Phase 1** · Problem Definition & EDA | Data quality report, feature ideas, baseline |
-| 3–4 | Phase 2 · Feature Engineering | Feature store, transformation pipelines |
-| 5–6 | Phase 3 · Model Development | XGBoost/LightGBM, hyperparameter tuning |
-| 7–8 | Phase 4 · Ensemble & Optimisation | Stacking, RL agent, SHAP interpretability |
-| 9–10 | Phase 5 · Deployment | FastAPI, Docker, Kubernetes, CI/CD |
-| 11–12 | Phase 6 · Monitoring & Handoff | Evidently AI, Grafana dashboards, docs |
+| Week | Phase | Key Deliverable | Status |
+|---|---|---|---|
+| 1–2 | Phase 1 · Problem Definition & EDA | Data quality report, feature ideas, baseline | ✅ Complete |
+| 3–4 | Phase 2 · Feature Engineering | Feature store, transformation pipelines | ✅ Complete |
+| 5–6 | Phase 3 · Model Development | XGBoost/LightGBM, hyperparameter tuning | ✅ Complete |
+| 7–8 | Phase 4 · Ensemble & Optimisation | Stacking, RL agent, SHAP interpretability | ✅ Complete |
+| 9–10 | Phase 5 · Deployment | FastAPI, Docker, Kubernetes, CI/CD | ✅ Complete |
+| 11–12 | Phase 6 · Monitoring & Handoff | Evidently AI, Grafana, Retraining, Docs | ✅ Complete |
 
 ---
 
@@ -224,7 +240,6 @@ All training runs log parameters and metrics to MLflow automatically.
 | Cost-to-Collect Reduction | −25% | Operational data comparison |
 | Customer Churn Reduction | −15% | Post-collection surveys |
 
-**Phase 1 MVP gate (Week 6):** AUC > 0.80 · Batch inference pipeline running · Basic API endpoint
 
 ---
 
