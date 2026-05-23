@@ -4,9 +4,6 @@ An end-to-end machine learning system that predicts loan default risk and recomm
 optimal collection strategies to maximise recovery rates while minimising operational costs
 and customer friction.
 
-> **Status:** Phase 1 — Problem Definition & EDA
-> **Target:** Default prediction AUC-ROC > 0.85 · Recovery rate +20% · Cost-to-collect −25%
-
 ---
 
 ## Table of Contents
