@@ -8,30 +8,41 @@ from src.models.predict_model import predict
 
 def test_predict_risk_tiers():
     """Test that predict() correctly assigns risk tiers and recommended actions."""
-    # Mock model
-    mock_model = MagicMock()
-    # Mock predict_proba to return specific probabilities: 0.1, 0.45, 0.8
-    # Format required by sklearn: array of shape (n_samples, n_classes)
-    mock_model.predict_proba.return_value = np.array([
-        [0.9, 0.1],  # low risk
-        [0.55, 0.45], # medium risk
-        [0.2, 0.8]   # high risk
-    ])
+    mock_stacker = MagicMock()
+    mock_stacker.predict_proba.side_effect = [
+        np.array([[0.9, 0.1]]),   # low risk (0.1)
+        np.array([[0.55, 0.45]]), # medium risk (0.45)
+        np.array([[0.2, 0.8]])    # high risk (0.8)
+    ]
     
-    # Dummy features
-    dummy_features = pd.DataFrame({"dummy": [1, 2, 3]})
+    mock_rec = MagicMock()
+    mock_rec.predict.return_value = np.array([100.0])
+    mock_rec_models = {'p25': mock_rec, 'p50': mock_rec, 'p75': mock_rec}
     
-    results = predict(dummy_features, model=mock_model)
+    mock_agent = MagicMock()
+    mock_agent.select_action.return_value = 0 # email (0), low (0) -> cost 1 * 1 = 1
+    
+    # Dummy features (3 rows)
+    dummy_features = pd.DataFrame(np.random.rand(3, 20))
+    
+    results = predict(dummy_features, stacker=mock_stacker, recovery_models=mock_rec_models, rl_agent=mock_agent)
     
     assert len(results) == 3
-    assert results["default_probability"].iloc[0] == 0.1
-    assert results["risk_tier"].iloc[0] == "low"
-    assert "Standard Monitoring" in results["recommended_action"].iloc[0]
     
-    assert results["default_probability"].iloc[1] == 0.45
-    assert results["risk_tier"].iloc[1] == "medium"
-    assert "Restructuring" in results["recommended_action"].iloc[1]
+    # Low risk
+    assert results[0]["default_probability"] == 0.1
+    assert results[0]["risk_tier"] == "low"
+    assert results[0]["recommended_channel"] == "none"
+    assert results[0]["recommended_intensity"] == "none"
     
-    assert results["default_probability"].iloc[2] == 0.8
-    assert results["risk_tier"].iloc[2] == "high"
-    assert "Aggressive" in results["recommended_action"].iloc[2]
+    # Medium risk
+    assert results[1]["default_probability"] == 0.45
+    assert results[1]["risk_tier"] == "medium"
+    assert results[1]["recommended_channel"] == "email"
+    assert results[1]["recommended_intensity"] == "low"
+    
+    # High risk
+    assert results[2]["default_probability"] == 0.8
+    assert results[2]["risk_tier"] == "high"
+    assert results[2]["recommended_channel"] == "email"
+    assert results[2]["recommended_intensity"] == "low"

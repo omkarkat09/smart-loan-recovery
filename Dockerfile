@@ -14,21 +14,28 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt uvicorn[sta
 # Stage 2: Runtime
 FROM python:3.10-slim
 
+# Create a non-root user with UID 1000
+RUN useradd -m -u 1000 user
+
 WORKDIR /app
 
 # Copy the pre-built dependencies from the builder stage
 COPY --from=builder /install /usr/local
 
-# Copy application source code
-COPY src/ /app/src/
-
-# We include a wildcard for config in case it exists, without failing if it doesn't
-COPY config* /app/config/
+# Copy application source code and config, ensuring correct ownership
+COPY --chown=user:user src/ /app/src/
+COPY --chown=user:user config* /app/config/
 
 # Ensure python path includes the working directory for absolute imports
 ENV PYTHONPATH=/app
 ENV MLFLOW_TRACKING_URI=http://mlflow:5000
 
-EXPOSE 8000
+# Set ownership of /app to the non-root user
+RUN chown -R user:user /app
 
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+# Switch to the non-root user
+USER user
+
+EXPOSE 7860
+
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "2"]

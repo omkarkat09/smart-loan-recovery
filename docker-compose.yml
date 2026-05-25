@@ -9,7 +9,7 @@ services:
     build: .
     container_name: slr_api
     ports:
-      - "8000:8000"
+      - "8000:7860"
     depends_on:
       - mlflow
     environment:
@@ -17,7 +17,7 @@ services:
     networks:
       - slr-net
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7860/health')"]
       interval: 10s
       timeout: 5s
       retries: 5
