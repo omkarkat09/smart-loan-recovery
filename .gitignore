@@ -186,3 +186,15 @@ docs/generated/
 # Jupyter kernel specs (local only)
 # -----------------------------------------------------------------------------
 .kernels/
+
+
+
+# Ignore generated plots and notebooks outputs
+notebooks/*.png
+notebooks/*.jpg
+notebooks/*.jpeg
+
+# Ignore MLflow and DVC local tracking files if they exist
+.mlflow/
+mlruns/
+.dvc/cache/
